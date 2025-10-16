@@ -1,0 +1,76 @@
+sudo dnf install httpd -y
+sudo systemctl enable httpd
+sudo systemctl start httpd
+
+sudo vi /etc/httpd/conf/httpd.conf
+(Change 'Listen 80' to 'Listen 8080')
+sudo systemctl restart httpd
+
+Create index.html:
+echo "Hello from Apache" | sudo tee /var/www/html/index.html
+Access via: http://<server-ip>:8080
+
+sudo dnf install mariadb-server -y
+sudo systemctl enable mariadb
+sudo systemctl start mariadb
+sudo mysql_secure_installation
+
+udo mysql -u root -p
+CREATE DATABASE wordpress_db;
+CREATE USER 'wpuser'@'localhost' IDENTIFIED BY 'StrongPassword123';
+GRANT ALL PRIVILEGES ON wordpress_db.* TO 'wpuser'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
+
+sudo dnf install php php-mysqlnd php-fpm php-cli php-json php-gd php-curl php-xml -y
+sudo systemctl enable php-fpm
+sudo systemctl start php-fpm
+sudo systemctl restart httpd
+
+cd /tmp
+curl -O https://wordpress.org/latest.tar.gz
+tar -xvzf latest.tar.gz
+sudo cp -r wordpress /var/www/html/
+sudo chown -R apache:apache /var/www/html/wordpress
+sudo chmod -R 755 /var/www/html/wordpress
+
+
+cd /var/www/html/wordpress
+cp wp-config-sample.php wp-config.php
+sudo vi wp-config.php
+Set:
+define('DB_NAME', 'wordpress_db');
+define('DB_USER', 'wpuser');
+define('DB_PASSWORD', 'StrongPassword123');
+define('DB_HOST', 'localhost');
+sudo chown apache:apache wp-config.php
+sudo chmod 644 wp-config.php
+
+Access: http://<server-ip>:8080/wordpress
+
+sudo dnf install mod_ssl -y
+sudo systemctl restart httpd
+sudo firewall-cmd --permanent --add-service=https
+sudo firewall-cmd --reload
+sudo vi /etc/httpd/conf.d/wordpress-ssl.conf
+ <VirtualHost *:443>
+    DocumentRoot /var/www/html/wordpress
+    ServerName <server-ip>
+    SSLEngine on
+    SSLCertificateFile /etc/nginx/ssl/server.crt
+    SSLCertificateKeyFile /etc/nginx/ssl/server.key
+    <Directory "/var/www/html/wordpress">
+        AllowOverride All
+        Require all granted
+    </Directory>
+ </VirtualHost>
+ sudo systemctl restart httpd
+
+
+sudo vi /etc/httpd/conf.d/wordpress.conf
+ <VirtualHost *:8080>
+    Redirect permanent / https://<server-ip>/
+ </VirtualHost>
+ sudo systemctl restart httpd
+ 
+Access site securely: https://<server-ip>

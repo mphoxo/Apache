@@ -1,0 +1,32 @@
+ip a
+ip addr add <ip> dev <interface>(enp0s8)
+sudo systemctl restart network(client)
+sudo systemctl restart NetworkManager(S)
+
+sudo firewall-cmd --permanent --add-port=111/tcp
+sudo firewall-cmd --permanent --add-port=111/udp
+sudo firewall-cmd --permanent --add-port=2049/tcp
+sudo firewall-cmd --permanent --add-port=2049/udp
+
+sudo dnf update -y(S)
+sudo zypper update(C)
+sudo dnf install -y nfs-utils(S)
+sudo zypper install -y nfs-utils(C)
+
+sudo systemctl enable --now nfs-server(S_C)
+sudo systemctl enable --now rpcbind(S_C)
+
+sudo mkdir /var/ProjectA(S)
+echo "/var/ProjectA <ip>(rw,sync,no_root_squash)" | sudo tee -a /etc/exports(S)
+sudo exportfs -arv(S)
+
+sudo groupadd <groupname>
+sudo useradd -m -s /bin/bash -G <groupname> <username>
+sudo password <username>
+
+sudo chown root:<username> /var/ProjectA
+sudo chmod 3770 /var/ProjectA
+
+sudo su - <username>(C)
+mkdir ~/smart_home_system(C)
+mount -t nfs <ip>:/var/ProjectA(C)

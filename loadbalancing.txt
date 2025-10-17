@@ -1,0 +1,56 @@
+sudo ip addr add 192.168.56.101/24 dev ens33
+sudo ip addr add 192.168.56.102/24 dev ens33
+ip addr show ens33
+
+VM IPs: Main: 192.168.56.100, Backend1: 192.168.56.101, Backend2: 192.168.56.102
+
+Install Apache HTTP Server
+sudo dnf install httpd -y
+sudo systemctl enable httpd
+sudo systemctl start httpd
+
+Enable proxy modules:
+sudo sed -i 's/#\(LoadModule proxy_module\)/\1/' /etc/httpd/conf/httpd.conf
+sudo sed -i 's/#\(LoadModule proxy_balancer_module\)/\1/' /etc/httpd/conf/httpd.conf
+sudo sed -i 's/#\(LoadModule proxy_http_module\)/\1/' /etc/httpd/conf/httpd.conf
+sudo sed -i 's/#\(LoadModule slotmem_shm_module\)/\1/' /etc/httpd/conf/httpd.conf
+
+Restart Apache: sudo systemctl restart httpd
+
+Configure Backend Servers
+Create virtual hosts: sudo nano /etc/httpd/conf.d/backend.conf
+<VirtualHost 192.168.56.101:80> /var/www/html/server1</VirtualHost>
+<VirtualHost 192.168.56.102:80> /var/www/html/server2</VirtualHost>
+
+Create directories and index files:
+sudo mkdir -p /var/www/html/server1
+sudo mkdir -p /var/www/html/server2
+echo 'Server 1' | sudo tee /var/www/html/server1/index.html
+echo 'Server 2' | sudo tee /var/www/html/server2/index.html
+
+Restart Apache: sudo systemctl restart httpd
+
+Test backend servers: curl http://192.168.56.101/, curl http://192.168.56.102/
+
+Configure Load Balancer
+sudo nano /etc/httpd/conf.d/loadbalancer.conf
+Balancer Members: 192.168.56.101:80, 192.168.56.102:80
+
+Restart Apache: sudo systemctl restart httpd
+
+Test: curl http://192.168.56.100/
+Balancer Manager: http://192.168.56.100/balancer-manager
+
+Optional: Enable HTTPS
+sudo dnf install mod_ssl -y
+sudo systemctl restart httpd
+
+Load Balancing Methods
+byrequests - round-robin
+bytraffic - balance by bytes sent
+bybusyness - send new requests to least busy server
+heartbeat - use server health monitoring
+ 
+Verification Commands
+sudo systemctl status httpd
+curl -I http://localhost/apachectl -M | grep proxy
